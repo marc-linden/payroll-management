@@ -1,31 +1,38 @@
-package com.example.salarymanagement.database.entity;
+package com.example.payroll.database.entity;
 
-import java.util.*;
-import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.OneToMany;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
 import lombok.Getter;
 
 @Entity
 @Getter
-public class Employer extends BaseEntity {
+public class Employee extends BaseEntity {
   @Column
-  private String companyName;
+  private String firstName;
   @Column
-  private String taxId;
+  private String lastName;
   @Column
   private String email;
-  @Column
-  private String country;
   @Column
   private String street;
   @Column
   private String city;
   @Column
   private String postalCode;
-  @OneToMany(cascade = CascadeType.ALL, orphanRemoval = true, mappedBy = "employer")
-  private List<Employee> employees = new ArrayList<>();
+  @Column
+  @Enumerated(EnumType.STRING)
+  private Gender gender;
+  @Column
+  private String phone;
+  @Column
+  private String salutation;
+  @ManyToOne(optional = false)
+  @JoinColumn(name = "employer_id", nullable = false)
+  private Employer employer;
 
   /**
    * Since we do not have transient entities, we solely rely on the id to compare
@@ -45,4 +52,5 @@ public class Employer extends BaseEntity {
   public int hashCode() {
     return super.hashCode();
   }
+
 }

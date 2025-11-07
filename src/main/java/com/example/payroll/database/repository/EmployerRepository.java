@@ -1,6 +1,6 @@
-package com.example.salarymanagement.database.repository;
+package com.example.payroll.database.repository;
 
-import com.example.salarymanagement.database.entity.Employer;
+import com.example.payroll.database.entity.Employer;
 import org.springframework.data.repository.CrudRepository;
 import org.springframework.stereotype.Repository;
 

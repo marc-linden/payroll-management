@@ -1,4 +1,4 @@
-package com.example.salarymanagement.external.model;
+package com.example.payroll.external.model;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import lombok.Builder;

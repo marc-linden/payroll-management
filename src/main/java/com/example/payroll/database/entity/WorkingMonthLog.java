@@ -1,4 +1,4 @@
-package com.example.salarymanagement.database.entity;
+package com.example.payroll.database.entity;
 
 import java.time.Instant;
 import jakarta.persistence.Column;
