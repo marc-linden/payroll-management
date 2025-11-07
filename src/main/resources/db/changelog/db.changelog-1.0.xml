@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                      http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.31.xsd" objectQuotingStrategy="QUOTE_ONLY_RESERVED_WORDS">
+    <changeSet id="1762520672044-1" author="marc.linden">
+        <createSequence incrementBy="50" sequenceName="employee_seq" startValue="1"/>
+    </changeSet>
+    <changeSet id="1762520672044-2" author="marc.linden">
+        <createSequence incrementBy="50" sequenceName="employer_seq" startValue="1"/>
+    </changeSet>
+    <changeSet id="1762520672044-3" author="marc.linden">
+        <createSequence incrementBy="50" sequenceName="working_month_log_seq" startValue="1"/>
+    </changeSet>
+    <changeSet id="1" author="marc.linden">
+        <createTable tableName="employee">
+            <column name="id" type="BIGINT">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="pk_employee"/>
+            </column>
+            <column name="first_name" type="VARCHAR(255)"/>
+            <column name="last_name" type="VARCHAR(255)"/>
+            <column name="email" type="VARCHAR(255)"/>
+            <column name="street" type="VARCHAR(255)"/>
+            <column name="city" type="VARCHAR(255)"/>
+            <column name="postal_code" type="VARCHAR(255)"/>
+            <column name="gender" type="VARCHAR(255)"/>
+            <column name="phone" type="VARCHAR(255)"/>
+            <column name="salutation" type="VARCHAR(255)"/>
+            <column name="employer_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+    </changeSet>
+    <changeSet id="2" author="marc.linden">
+        <createTable tableName="employer">
+            <column name="id" type="BIGINT">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="pk_employer"/>
+            </column>
+            <column name="company_name" type="VARCHAR(255)"/>
+            <column name="tax_id" type="VARCHAR(255)"/>
+            <column name="email" type="VARCHAR(255)"/>
+            <column name="country" type="VARCHAR(255)"/>
+            <column name="street" type="VARCHAR(255)"/>
+            <column name="city" type="VARCHAR(255)"/>
+            <column name="postal_code" type="VARCHAR(255)"/>
+        </createTable>
+    </changeSet>
+    <changeSet id="3" author="marc.linden">
+        <createTable tableName="working_month_log">
+            <column name="id" type="BIGINT">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="pk_workingmonthlog"/>
+            </column>
+            <column name="insert_employee_id" type="BIGINT"/>
+            <column name="insert_timestamp" type="DATETIME"/>
+            <column name="working_log_source" type="VARCHAR(255)"/>
+            <column name="working_log_employee_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="working_log_year" type="INT"/>
+            <column name="working_log_month" type="INT"/>
+            <column name="working_log_time_in_hours" type="INT"/>
+        </createTable>
+    </changeSet>
+    <changeSet id="4" author="marc.linden">
+        <addForeignKeyConstraint baseColumnNames="employer_id" baseTableName="employee" constraintName="FK_EMPLOYEE_ON_EMPLOYER" referencedColumnNames="id" referencedTableName="employer"/>
+    </changeSet>
+    <changeSet id="5" author="marc.linden">
+        <addForeignKeyConstraint baseColumnNames="working_log_employee_id" baseTableName="working_month_log" constraintName="FK_WORKINGMONTHLOG_ON_WORKINGLOGEMPLOYEE" referencedColumnNames="id"
+                                 referencedTableName="employee"/>
+    </changeSet>
+
+</databaseChangeLog>
