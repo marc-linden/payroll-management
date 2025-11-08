@@ -16,14 +16,6 @@ public class Employer extends BaseEntity {
   private String taxId;
   @Column
   private String email;
-  @Column
-  private String country;
-  @Column
-  private String street;
-  @Column
-  private String city;
-  @Column
-  private String postalCode;
   @OneToMany(cascade = CascadeType.ALL, orphanRemoval = true, mappedBy = "employer")
   private List<Employee> employees = new ArrayList<>();
 

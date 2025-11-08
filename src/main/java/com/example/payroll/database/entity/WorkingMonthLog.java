@@ -20,14 +20,13 @@ public class WorkingMonthLog extends BaseEntity {
   @Enumerated(EnumType.STRING)
   private WorkingLogSource workingLogSource;
   @ManyToOne(optional = false)
-  @JoinColumn(name = "workingLogEmployee_id", nullable = false)
-  private Employee workingLogEmployee;
+  @JoinColumn(name = "employee_id", nullable = false)
+  private Employee employee;
+  private Integer year;
   @Column
-  private Integer workingLogYear;
+  private Integer month; // zero-based month
   @Column
-  private Integer workingLogMonth; // zero-based month
-  @Column
-  private Integer workingLogTimeInHours;
+  private Integer logTimeInHours;
 
   /**
    * Since we do not have transient entities, we solely rely on the id to compare

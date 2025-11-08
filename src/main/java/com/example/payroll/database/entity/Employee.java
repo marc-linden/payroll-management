@@ -18,18 +18,15 @@ public class Employee extends BaseEntity {
   @Column
   private String email;
   @Column
-  private String street;
-  @Column
-  private String city;
-  @Column
-  private String postalCode;
+  @Enumerated(EnumType.STRING)
+  private Role role;
   @Column
   @Enumerated(EnumType.STRING)
-  private Gender gender;
+  private EmploymentType employmentType;
   @Column
-  private String phone;
-  @Column
-  private String salutation;
+  @Enumerated(EnumType.STRING)
+  private PaymentType paymentType;
+
   @ManyToOne(optional = false)
   @JoinColumn(name = "employer_id", nullable = false)
   private Employer employer;

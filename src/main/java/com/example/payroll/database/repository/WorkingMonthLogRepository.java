@@ -6,4 +6,6 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 public interface WorkingMonthLogRepository extends CrudRepository<WorkingMonthLog, Long> {
+
+  WorkingMonthLog findByEmployeeIdAndYearAndMonth(Long employeeId, Integer year, Integer month);
 }

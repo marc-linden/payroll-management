@@ -21,12 +21,9 @@
             <column name="first_name" type="VARCHAR(255)"/>
             <column name="last_name" type="VARCHAR(255)"/>
             <column name="email" type="VARCHAR(255)"/>
-            <column name="street" type="VARCHAR(255)"/>
-            <column name="city" type="VARCHAR(255)"/>
-            <column name="postal_code" type="VARCHAR(255)"/>
-            <column name="gender" type="VARCHAR(255)"/>
-            <column name="phone" type="VARCHAR(255)"/>
-            <column name="salutation" type="VARCHAR(255)"/>
+            <column name="role" type="VARCHAR(255)"/>
+            <column name="employment_type" type="VARCHAR(255)"/>
+            <column name="payment_type" type="VARCHAR(255)"/>
             <column name="employer_id" type="BIGINT">
                 <constraints nullable="false"/>
             </column>
@@ -40,10 +37,6 @@
             <column name="company_name" type="VARCHAR(255)"/>
             <column name="tax_id" type="VARCHAR(255)"/>
             <column name="email" type="VARCHAR(255)"/>
-            <column name="country" type="VARCHAR(255)"/>
-            <column name="street" type="VARCHAR(255)"/>
-            <column name="city" type="VARCHAR(255)"/>
-            <column name="postal_code" type="VARCHAR(255)"/>
         </createTable>
     </changeSet>
     <changeSet id="3" author="marc.linden">
@@ -54,19 +47,19 @@
             <column name="insert_employee_id" type="BIGINT"/>
             <column name="insert_timestamp" type="DATETIME"/>
             <column name="working_log_source" type="VARCHAR(255)"/>
-            <column name="working_log_employee_id" type="BIGINT">
+            <column name="employee_id" type="BIGINT">
                 <constraints nullable="false"/>
             </column>
-            <column name="working_log_year" type="INT"/>
-            <column name="working_log_month" type="INT"/>
-            <column name="working_log_time_in_hours" type="INT"/>
+            <column name="year" type="INT"/>
+            <column name="month" type="INT"/>
+            <column name="log_time_in_hours" type="INT"/>
         </createTable>
     </changeSet>
     <changeSet id="4" author="marc.linden">
         <addForeignKeyConstraint baseColumnNames="employer_id" baseTableName="employee" constraintName="FK_EMPLOYEE_ON_EMPLOYER" referencedColumnNames="id" referencedTableName="employer"/>
     </changeSet>
     <changeSet id="5" author="marc.linden">
-        <addForeignKeyConstraint baseColumnNames="working_log_employee_id" baseTableName="working_month_log" constraintName="FK_WORKINGMONTHLOG_ON_WORKINGLOGEMPLOYEE" referencedColumnNames="id"
+        <addForeignKeyConstraint baseColumnNames="employee_id" baseTableName="working_month_log" constraintName="FK_WORKINGMONTHLOG_ON_WORKINGLOGEMPLOYEE" referencedColumnNames="id"
                                  referencedTableName="employee"/>
     </changeSet>
 
