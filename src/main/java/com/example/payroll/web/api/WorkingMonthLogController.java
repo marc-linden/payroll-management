@@ -1,6 +1,8 @@
 package com.example.payroll.web.api;
 
 import static java.util.function.Predicate.not;
+import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.linkTo;
+import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.methodOn;
 
 import java.time.Instant;
 import java.util.*;
@@ -14,10 +16,14 @@ import com.example.payroll.exception.InconsistentRequestDataException;
 import com.example.payroll.exception.ResourceAlreadyExistsException;
 import com.example.payroll.exception.ResourceNotFoundException;
 import com.example.payroll.security.SecurityContextService;
-import com.example.payroll.web.api.mapper.ResourceToEntityMapper;
+import com.example.payroll.web.api.mapper.ResourceModelMapper;
 import com.example.payroll.web.api.model.WorkingMonthLogResource;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.hateoas.CollectionModel;
+import org.springframework.hateoas.EntityModel;
+import org.springframework.hateoas.IanaLinkRelations;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -34,32 +40,34 @@ public class WorkingMonthLogController {
   private final SecurityContextService securityContextService;
   private final EmployeeRepository employeeRepository;
   private final WorkingMonthLogRepository workingMonthLogRepository;
-  private final ResourceToEntityMapper<WorkingMonthLogResource, WorkingMonthLog> resourceToEntityMapper;
+  private final ResourceModelMapper<WorkingMonthLogResource, WorkingMonthLog> resourceToEntityMapper;
 
   @GetMapping("/employees/{id}/working-month-log/{year}/{month}")
-  public WorkingMonthLogResource single(@PathVariable(name = "id") Long employeeId, @PathVariable Integer year, @PathVariable Integer month) {
+  public EntityModel<WorkingMonthLogResource> single(@PathVariable(name = "id") Long employeeId, @PathVariable Integer year, @PathVariable Integer month) {
     ensureExistingEmployee(employeeId);
-    return resourceToEntityMapper.toResource(findMandatoryWorkingMonthLog(employeeId, year, month));
+    return resourceToEntityMapper.toHalEntityModel(findMandatoryWorkingMonthLog(employeeId, year, month));
   }
 
   @GetMapping("/employees/{id}/working-month-log/{year}")
-  public List<WorkingMonthLogResource> allPerYear(@PathVariable(name = "id") Long employeeId, @PathVariable Integer year) {
+  public CollectionModel<EntityModel<WorkingMonthLogResource>> allOfYear(@PathVariable(name = "id") Long employeeId, @PathVariable Integer year) {
     ensureExistingEmployee(employeeId);
-    return workingMonthLogRepository.findByEmployeeIdAndLogYear(employeeId, year).stream()
-        .map(resourceToEntityMapper::toResource)
+    List<EntityModel<WorkingMonthLogResource>> workingLogsOfYear = workingMonthLogRepository.findByEmployeeIdAndLogYear(employeeId, year).stream()
+        .map(resourceToEntityMapper::toHalEntityModel)
         .toList();
+    return CollectionModel.of(workingLogsOfYear, linkTo(methodOn(WorkingMonthLogController.class).allOfYear(employeeId, year)).withSelfRel());
   }
 
   @GetMapping("/employees/{id}/working-month-log")
-  public List<WorkingMonthLogResource> all(@PathVariable(name = "id") Long employeeId) {
+  public CollectionModel<EntityModel<WorkingMonthLogResource>> all(@PathVariable(name = "id") Long employeeId) {
     ensureExistingEmployee(employeeId);
-    return workingMonthLogRepository.findByEmployeeId(employeeId).stream()
-        .map(resourceToEntityMapper::toResource)
+    List<EntityModel<WorkingMonthLogResource>> workingLogsOfEmployee = workingMonthLogRepository.findByEmployeeId(employeeId).stream()
+        .map(resourceToEntityMapper::toHalEntityModel)
         .toList();
+    return CollectionModel.of(workingLogsOfEmployee, linkTo(methodOn(WorkingMonthLogController.class).all(employeeId)).withSelfRel());
   }
 
   @PostMapping("/employees/{id}/working-month-log/{year}/{month}")
-  public WorkingMonthLogResource newWorkingMonthLog(
+  public ResponseEntity<EntityModel<WorkingMonthLogResource>> newWorkingMonthLog(
       @PathVariable(name = "id") Long employeeId,
       @PathVariable Integer year,
       @PathVariable Integer month,
@@ -72,16 +80,19 @@ public class WorkingMonthLogController {
       throw new ResourceAlreadyExistsException("Working log exists already");
     }
 
-    WorkingMonthLog workingMonthLog = resourceToEntityMapper.fromResource(workingMonthLogResource);
+    WorkingMonthLog workingMonthLog = resourceToEntityMapper.toJpaEntity(workingMonthLogResource);
     workingMonthLog.setInsertEmployeeId(securityContextService.getAuthenticatedEmployee().getId());
     workingMonthLog.setInsertTimestamp(Instant.now());
     workingMonthLog.setWorkingLogSource(WorkingLogSource.INTERNAL);
 
-    return resourceToEntityMapper.toResource(workingMonthLogRepository.save(workingMonthLog));
+    EntityModel<WorkingMonthLogResource> entityModel = resourceToEntityMapper.toHalEntityModel(workingMonthLogRepository.save(workingMonthLog));
+    return ResponseEntity
+        .created(entityModel.getRequiredLink(IanaLinkRelations.SELF).toUri())
+        .body(entityModel);
   }
 
   @PutMapping("/employees/{id}/working-month-log/{year}/{month}")
-  public WorkingMonthLogResource replaceWorkingMonthLog(
+  public ResponseEntity<EntityModel<WorkingMonthLogResource>> replaceWorkingMonthLog(
       @PathVariable(name = "id") Long employeeId,
       @PathVariable Integer year,
       @PathVariable Integer month,
@@ -94,17 +105,21 @@ public class WorkingMonthLogController {
     workingMonthLog.setInsertEmployeeId(securityContextService.getAuthenticatedEmployee().getId());
     workingMonthLog.setInsertTimestamp(Instant.now());
 
-    return resourceToEntityMapper.toResource(workingMonthLogRepository.save(workingMonthLog));
+    EntityModel<WorkingMonthLogResource> entityModel = resourceToEntityMapper.toHalEntityModel(workingMonthLogRepository.save(workingMonthLog));
+    return ResponseEntity
+        .created(entityModel.getRequiredLink(IanaLinkRelations.SELF).toUri())
+        .body(entityModel);
   }
 
   @DeleteMapping("/employees/{id}/working-month-log/{year}/{month}")
-  void deleteWorkingMonthLog(
+  ResponseEntity<Void> deleteWorkingMonthLog(
       @PathVariable(name = "id") Long employeeId,
       @PathVariable Integer year,
       @PathVariable Integer month) {
 
     ensureExistingEmployee(employeeId);
     workingMonthLogRepository.delete(findMandatoryWorkingMonthLog(employeeId, year, month));
+    return ResponseEntity.noContent().build();
   }
 
   private void ensureExistingEmployee(Long employeeId) {
