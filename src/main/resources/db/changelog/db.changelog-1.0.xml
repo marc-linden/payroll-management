@@ -50,8 +50,8 @@
             <column name="employee_id" type="BIGINT">
                 <constraints nullable="false"/>
             </column>
-            <column name="year" type="INT"/>
-            <column name="month" type="INT"/>
+            <column name="log_year" type="INT"/>
+            <column name="log_month" type="INT"/>
             <column name="log_time_in_hours" type="INT"/>
         </createTable>
     </changeSet>
@@ -61,6 +61,9 @@
     <changeSet id="5" author="marc.linden">
         <addForeignKeyConstraint baseColumnNames="employee_id" baseTableName="working_month_log" constraintName="FK_WORKINGMONTHLOG_ON_WORKINGLOGEMPLOYEE" referencedColumnNames="id"
                                  referencedTableName="employee"/>
+    </changeSet>
+    <changeSet id="6" author="marc.linden">
+        <addUniqueConstraint tableName="working_month_log" columnNames="employee_id, working_log_source, log_year, log_month" constraintName="UX_WORKINGMONTHLOG"/>
     </changeSet>
 
 </databaseChangeLog>

@@ -5,12 +5,12 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
 import lombok.Getter;
+import lombok.Setter;
 
 @Entity
 @Getter
+@Setter
 public class WorkingMonthLog extends BaseEntity {
   @Column
   private Long insertEmployeeId;
@@ -19,14 +19,14 @@ public class WorkingMonthLog extends BaseEntity {
   @Column
   @Enumerated(EnumType.STRING)
   private WorkingLogSource workingLogSource;
-  @ManyToOne(optional = false)
-  @JoinColumn(name = "employee_id", nullable = false)
-  private Employee employee;
-  private Integer year;
   @Column
-  private Integer month; // zero-based month
+  private Long employeeId;
   @Column
-  private Integer logTimeInHours;
+  private Integer logYear;
+  @Column
+  private Integer logMonth; // zero-based month
+  @Column
+  private Integer logTimeInHours; // no fraction digits
 
   /**
    * Since we do not have transient entities, we solely rely on the id to compare
