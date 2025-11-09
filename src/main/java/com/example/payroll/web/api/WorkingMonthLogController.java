@@ -101,11 +101,12 @@ public class WorkingMonthLogController {
     ensureExistingEmployee(employeeId);
     ensureConsistencyWithPathVariables(employeeId, year, month, newResource);
 
-    WorkingMonthLog workingMonthLog = findMandatoryWorkingMonthLog(employeeId, year, month);
-    workingMonthLog.setInsertEmployeeId(securityContextService.getAuthenticatedEmployee().getId());
-    workingMonthLog.setInsertTimestamp(Instant.now());
+    WorkingMonthLog workingMonthLogToUpdate = findMandatoryWorkingMonthLog(employeeId, year, month);
+    workingMonthLogToUpdate.setInsertEmployeeId(securityContextService.getAuthenticatedEmployee().getId());
+    workingMonthLogToUpdate.setInsertTimestamp(Instant.now());
+    workingMonthLogToUpdate.setLogTimeInHours(newResource.getWorkingHours());
 
-    EntityModel<WorkingMonthLogResource> entityModel = resourceToEntityMapper.toHalEntityModel(workingMonthLogRepository.save(workingMonthLog));
+    EntityModel<WorkingMonthLogResource> entityModel = resourceToEntityMapper.toHalEntityModel(workingMonthLogRepository.save(workingMonthLogToUpdate));
     return ResponseEntity
         .created(entityModel.getRequiredLink(IanaLinkRelations.SELF).toUri())
         .body(entityModel);

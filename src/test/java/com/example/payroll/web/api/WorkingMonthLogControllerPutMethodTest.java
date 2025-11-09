@@ -1,7 +1,9 @@
 package com.example.payroll.web.api;
 
 import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.is;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -27,7 +29,7 @@ import org.springframework.web.context.WebApplicationContext;
 
 @ExtendWith(SpringExtension.class)
 @SpringBootTest
-class WorkingMonthLogControllerPostMethodTest {
+class WorkingMonthLogControllerPutMethodTest {
   @Autowired
   private WebApplicationContext webApplicationContext;
   @Autowired
@@ -38,10 +40,10 @@ class WorkingMonthLogControllerPostMethodTest {
   static Stream<Arguments> postRequestArgumentsWithExpectedResult() {
     return Stream.of(
         Arguments.of("400 - 'Bad Request' because year validation fails",
-            "/api/v1/payroll/employees/4003/working-month-log/1969/11",
+            "/api/v1/payroll/employees/4003/working-month-log/1954/11",
             WorkingMonthLogResource.builder()
                 .employeeId(4003L)
-                .year(1969)
+                .year(1954)
                 .month(11)
                 .workingHours(45)
                 .build(),
@@ -50,16 +52,16 @@ class WorkingMonthLogControllerPostMethodTest {
                 content().string(containsString("must be greater than or equal to 1970"))}
         ),
         Arguments.of("400 - 'Bad Request' because month validation fails",
-            "/api/v1/payroll/employees/4003/working-month-log/1970/12",
+            "/api/v1/payroll/employees/4003/working-month-log/1970/-2",
             WorkingMonthLogResource.builder()
                 .employeeId(4003L)
                 .year(1970)
-                .month(12)
+                .month(-2)
                 .workingHours(35)
                 .build(),
             new ResultMatcher[]{
                 status().isBadRequest(),
-                content().string(containsString("must be less than or equal to 11"))}
+                content().string(containsString("must be greater than or equal to 0"))}
         ),
         Arguments.of("404 - 'Not Found' because employee not found",
             "/api/v1/payroll/employees/55/working-month-log/1970/8",
@@ -73,37 +75,52 @@ class WorkingMonthLogControllerPostMethodTest {
                 status().isNotFound(),
                 content().string(containsString("Could not find employee [id: 55]"))}
         ),
-        Arguments.of("201 - 'Created' because request is fine",
-            "/api/v1/payroll/employees/4003/working-month-log/2025/0",
+        Arguments.of("400 - 'Bad Request' because of inconsistent request data",
+            "/api/v1/payroll/employees/4001/working-month-log/2010/7",
             WorkingMonthLogResource.builder()
-                .employeeId(4003L)
-                .year(2025)
-                .month(0)
-                .workingHours(27)
+                .employeeId(77L)
+                .year(2010)
+                .month(7)
+                .workingHours(40)
+                .build(),
+            new ResultMatcher[]{
+                status().isBadRequest(),
+                content().string(is("Path variables do not match to the request body"))}
+        ),
+        Arguments.of("404 - 'Not Found' because working month to update does not exist",
+            "/api/v1/payroll/employees/4002/working-month-log/2023/4",
+            WorkingMonthLogResource.builder()
+                .employeeId(4002L)
+                .year(2023)
+                .month(4)
+                .workingHours(32)
+                .build(),
+            new ResultMatcher[]{
+                status().isNotFound(),
+                content().string(is("Could not find working month log"))}
+        ),
+        Arguments.of("201 - 'Created' because update request is fine",
+            "/api/v1/payroll/employees/4002/working-month-log/2024/3",
+            WorkingMonthLogResource.builder()
+                .employeeId(4002L)
+                .year(2024)
+                .month(3)
+                .workingHours(39)
                 .build(),
             new ResultMatcher[]{
                 status().isCreated(),
                 header().exists("location"),
                 content().contentType("application/hal+json"),
-                jsonPath("$.employeeId").value(4003),
-                jsonPath("$.year").value(2025),
-                jsonPath("$.month").value(0),
-                jsonPath("$.workingHours").value(27),
+                jsonPath("$.employeeId").value(4002),
+                jsonPath("$.year").value(2024),
+                jsonPath("$.month").value(3),
+                jsonPath("$.workingHours").value(39),
             }),
-        Arguments.of("409 - 'Conflict' because working log already exists for employee with month and year",
-            "/api/v1/payroll/employees/4003/working-month-log/1992/0",
-            WorkingMonthLogResource.builder()
-                .employeeId(4003L)
-                .year(1992)
-                .month(0)
-                .workingHours(45)
-                .build(),
-            new ResultMatcher[]{status().isConflict()}
-        ),
-        Arguments.of("405 - 'Method Not Allowed' because month is missing in URI",
-            "/api/v1/payroll/employees/4002/working-month-log/1970",
+        Arguments.of("405 - 'Method Not Allowed' because year and month are missing in URI",
+            "/api/v1/payroll/employees/4004/working-month-log",
             WorkingMonthLogResource.builder().build(),
-            new ResultMatcher[]{status().isMethodNotAllowed()}
+            new ResultMatcher[]{
+                status().isMethodNotAllowed()}
         )
     );
   }
@@ -114,21 +131,21 @@ class WorkingMonthLogControllerPostMethodTest {
     this.objectMapper = new ObjectMapper();
     workingMonthLogRepository.deleteAll(); // remove all working month logs
     // create existing working month log
-    this.mockMvc.perform(post("/api/v1/payroll/employees/{id}/working-month-log/{year}/{month}", 4003, 1992, 0)
+    this.mockMvc.perform(post("/api/v1/payroll/employees/4002/working-month-log/2024/3")
         .contentType(MediaType.APPLICATION_JSON.toString())
         .content(objectMapper.writeValueAsString(WorkingMonthLogResource.builder()
-            .employeeId(4003L)
-            .year(1992)
-            .month(0)
-            .workingHours(43)
+            .employeeId(4002L)
+            .year(2024)
+            .month(3)
+            .workingHours(37)
             .build())));
   }
 
   @ParameterizedTest(name = "{index}: {0}")
   @MethodSource("postRequestArgumentsWithExpectedResult")
-  void GIVEN_post_request_is_performed_with_arguments_THEN_expected_result_matchers_are_matching(@SuppressWarnings("unused") String description, String uri, WorkingMonthLogResource resource, ResultMatcher[] expectedResultMatchers) throws Exception {
+  void GIVEN_put_request_is_performed_with_arguments_THEN_expected_result_matchers_are_matching(@SuppressWarnings("unused") String description, String uri, WorkingMonthLogResource resource, ResultMatcher[] expectedResultMatchers) throws Exception {
     // Arrange & Act & Assert
-    this.mockMvc.perform(post(uri)
+    this.mockMvc.perform(put(uri)
             .contentType(MediaType.APPLICATION_JSON.toString())
             .content(objectMapper.writeValueAsString(resource)))
         .andExpectAll(expectedResultMatchers);
