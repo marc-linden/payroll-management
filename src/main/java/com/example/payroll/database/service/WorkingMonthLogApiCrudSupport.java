@@ -4,7 +4,7 @@ import java.util.*;
 import com.example.payroll.database.entity.WorkingMonthLog;
 import com.example.payroll.web.api.model.WorkingMonthLogResource;
 
-public interface WorkingMonthLogApiService {
+public interface WorkingMonthLogApiCrudSupport {
 
   void ensureExistingEmployee(Long employeeId);
 

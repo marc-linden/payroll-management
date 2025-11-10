@@ -12,11 +12,11 @@ import com.example.payroll.database.entity.WorkingMonthLog;
 import com.example.payroll.database.repository.WorkingMonthLogRepository;
 import com.example.payroll.external.importer.service.SyncWorkingMonthLogService;
 import com.example.payroll.web.api.model.WorkingMonthLogResource;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.client.TestRestTemplate;
-import org.springframework.hateoas.EntityModel;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 
@@ -33,6 +33,12 @@ class ConcurrentExecutionOfApiAndImportTest {
 
   @Autowired
   private WorkingMonthLogRepository repository;
+
+  @BeforeEach
+  void setUp() {
+    // swipe the table to have a deterministic state
+    repository.deleteAll();
+  }
 
   @Test
   void testConcurrentOperations() {
@@ -58,9 +64,9 @@ class ConcurrentExecutionOfApiAndImportTest {
 
 
     // Act - Run both operations concurrently
-    CompletableFuture<ResponseEntity<EntityModel>> postFuture =
+    CompletableFuture<ResponseEntity<String>> postFuture =
         CompletableFuture.supplyAsync(() ->
-            restTemplate.postForEntity("/api/v1/payroll/employees/4002/working-month-log/2023/10", resource, EntityModel.class)
+            restTemplate.postForEntity("/api/v1/payroll/employees/4002/working-month-log/2023/10", resource, String.class)
         );
 
     CompletableFuture<Void> importFuture =
@@ -72,7 +78,7 @@ class ConcurrentExecutionOfApiAndImportTest {
     CompletableFuture.allOf(postFuture, importFuture).join();
 
     // Assert
-    ResponseEntity<?> response = postFuture.join();
+    ResponseEntity<String> response = postFuture.join();
 
     List<WorkingMonthLog> resources = repository.findByEmployeeIdAndLogYear(4002L, 2023);
     assertThat(resources, hasSize(2));

@@ -13,18 +13,17 @@ import com.example.payroll.security.SecurityContextService;
 import com.example.payroll.web.api.mapper.ResourceModelMapper;
 import com.example.payroll.web.api.model.WorkingMonthLogResource;
 import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Isolation;
-import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
 @Slf4j
-public class WorkingMonthLogApiServiceImpl implements WorkingMonthLogApiService {
+public class WorkingMonthLogApiCrudSupportImpl implements WorkingMonthLogApiCrudSupport {
   private final SecurityContextService securityContextService;
   private final EmployeeRepository employeeRepository;
   private final WorkingMonthLogRepository workingMonthLogRepository;
@@ -40,10 +39,7 @@ public class WorkingMonthLogApiServiceImpl implements WorkingMonthLogApiService 
   }
 
   @Override
-  @Transactional(
-      isolation = Isolation.READ_COMMITTED,
-      propagation = Propagation.REQUIRES_NEW
-  )
+  @Transactional
   public WorkingMonthLog create(WorkingMonthLogResource resource) {
     try {
       if (findByEmployeeIdAndYearAndMonth(resource.getEmployeeId(), resource.getYear(), resource.getMonth()).isPresent()) {
@@ -55,16 +51,18 @@ public class WorkingMonthLogApiServiceImpl implements WorkingMonthLogApiService 
       workingMonthLog.setWorkingLogSource(WorkingLogSource.INTERNAL);
 
       WorkingMonthLog saved = workingMonthLogRepository.save(workingMonthLog);
-      entityManager.flush();
+      entityManager.flush(); // force immediate flush to database to check for the constraint violation
+      log.debug("Created working month log: {}", saved);
+
       return saved;
-    } catch (DataIntegrityViolationException e) {
-      log.warn("Duplicate resource creation attempt: {}", e.getMessage());
+    } catch (DataIntegrityViolationException | PersistenceException e) {
+      log.warn("Duplicate resource creation attempt: [{}]", e.getClass().getSimpleName());
       throw new ResourceAlreadyExistsException(WORKING_LOG_EXISTS_ALREADY);
     }
   }
 
   @Override
-  @Transactional(isolation = Isolation.READ_COMMITTED)
+  @Transactional
   public WorkingMonthLog update(WorkingMonthLogResource resource) {
     WorkingMonthLog workingMonthLogToUpdate = findMandatoryWorkingMonthLog(resource.getEmployeeId(), resource.getYear(), resource.getMonth());
     workingMonthLogToUpdate.setInsertEmployeeId(securityContextService.getAuthenticatedEmployee().getId());
@@ -72,14 +70,18 @@ public class WorkingMonthLogApiServiceImpl implements WorkingMonthLogApiService 
     workingMonthLogToUpdate.setLogTimeInHours(resource.getWorkingHours());
 
     WorkingMonthLog saved = workingMonthLogRepository.save(workingMonthLogToUpdate);
-    entityManager.flush();
+    entityManager.flush(); // force immediate flush to database
+    log.debug("Updated working month log: {}", saved);
+
     return saved;
   }
 
   @Override
   @Transactional
   public void deleteByEmployeeIdAndYearAndMonth(Long employeeId, Integer year, Integer month) {
-    workingMonthLogRepository.delete(findMandatoryWorkingMonthLog(employeeId, year, month));
+    WorkingMonthLog workingMonthLogToDelete = findMandatoryWorkingMonthLog(employeeId, year, month);
+    workingMonthLogRepository.delete(workingMonthLogToDelete);
+    log.debug("Deleted working month log: {}", workingMonthLogToDelete);
   }
 
   @Override
