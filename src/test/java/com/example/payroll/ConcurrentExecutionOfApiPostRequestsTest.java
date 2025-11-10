@@ -12,11 +12,11 @@ import com.example.payroll.database.entity.WorkingLogSource;
 import com.example.payroll.database.entity.WorkingMonthLog;
 import com.example.payroll.database.repository.WorkingMonthLogRepository;
 import com.example.payroll.web.api.model.WorkingMonthLogResource;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.client.TestRestTemplate;
-import org.springframework.hateoas.EntityModel;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 
@@ -30,6 +30,12 @@ class ConcurrentExecutionOfApiPostRequestsTest {
 
   @Autowired
   private WorkingMonthLogRepository repository;
+
+  @BeforeEach
+  void setUp() {
+    // swipe the table to have a deterministic state
+    repository.deleteAll();
+  }
 
   @Test
   void testConcurrentOperations() {
@@ -46,14 +52,14 @@ class ConcurrentExecutionOfApiPostRequestsTest {
 
 
     // Act - Run both operations concurrently
-    CompletableFuture<ResponseEntity<EntityModel>> postFutureOne =
+    CompletableFuture<ResponseEntity<String>> postFutureOne =
         CompletableFuture.supplyAsync(() ->
-            restTemplate.postForEntity("/api/v1/payroll/employees/4002/working-month-log/2023/10", resource, EntityModel.class)
+            restTemplate.postForEntity("/api/v1/payroll/employees/4002/working-month-log/2023/10", resource, String.class)
         );
 
-    CompletableFuture<ResponseEntity<EntityModel>> postFutureTwo =
+    CompletableFuture<ResponseEntity<String>> postFutureTwo =
         CompletableFuture.supplyAsync(() ->
-            restTemplate.postForEntity("/api/v1/payroll/employees/4002/working-month-log/2023/10", resource, EntityModel.class)
+            restTemplate.postForEntity("/api/v1/payroll/employees/4002/working-month-log/2023/10", resource, String.class)
         );
 
     // Wait for both to complete
