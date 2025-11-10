@@ -7,10 +7,12 @@ import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import lombok.Getter;
 import lombok.Setter;
+import lombok.ToString;
 
 @Entity
 @Getter
 @Setter
+@ToString
 public class WorkingMonthLog extends BaseEntity {
   @Column
   private Long insertEmployeeId;

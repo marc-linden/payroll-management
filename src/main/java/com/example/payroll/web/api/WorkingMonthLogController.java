@@ -76,7 +76,7 @@ public class WorkingMonthLogController {
     ensureExistingEmployee(employeeId);
     ensureConsistencyWithPathVariables(employeeId, year, month, workingMonthLogResource);
 
-    if (workingMonthLogRepository.findByEmployeeIdAndLogYearAndLogMonth(employeeId, year, month).isPresent()) {
+    if (workingMonthLogRepository.findByEmployeeIdAndLogYearAndLogMonthAndWorkingLogSource(employeeId, year, month, WorkingLogSource.INTERNAL).isPresent()) {
       throw new ResourceAlreadyExistsException("Working log exists already");
     }
 
@@ -142,7 +142,7 @@ public class WorkingMonthLogController {
   }
 
   private WorkingMonthLog findMandatoryWorkingMonthLog(Long employeeId, Integer year, Integer month) {
-    return workingMonthLogRepository.findByEmployeeIdAndLogYearAndLogMonth(employeeId, year, month)
+    return workingMonthLogRepository.findByEmployeeIdAndLogYearAndLogMonthAndWorkingLogSource(employeeId, year, month, WorkingLogSource.INTERNAL)
         .orElseThrow(() -> new ResourceNotFoundException("Could not find working month log"));
   }
 }
