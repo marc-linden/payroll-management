@@ -4,18 +4,11 @@ import static java.util.function.Predicate.not;
 import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.linkTo;
 import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.methodOn;
 
-import java.time.Instant;
 import java.util.*;
 import java.util.function.Predicate;
-import com.example.payroll.database.entity.WorkingLogSource;
 import com.example.payroll.database.entity.WorkingMonthLog;
-import com.example.payroll.database.repository.EmployeeRepository;
-import com.example.payroll.database.repository.WorkingMonthLogRepository;
-import com.example.payroll.exception.EmployeeNotFoundException;
+import com.example.payroll.database.service.WorkingMonthLogApiService;
 import com.example.payroll.exception.InconsistentRequestDataException;
-import com.example.payroll.exception.ResourceAlreadyExistsException;
-import com.example.payroll.exception.ResourceNotFoundException;
-import com.example.payroll.security.SecurityContextService;
 import com.example.payroll.web.api.mapper.ResourceModelMapper;
 import com.example.payroll.web.api.model.WorkingMonthLogResource;
 import jakarta.validation.Valid;
@@ -37,21 +30,19 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/v1/payroll")
 @RequiredArgsConstructor
 public class WorkingMonthLogController {
-  private final SecurityContextService securityContextService;
-  private final EmployeeRepository employeeRepository;
-  private final WorkingMonthLogRepository workingMonthLogRepository;
+  private final WorkingMonthLogApiService workingMonthLogApiService;
   private final ResourceModelMapper<WorkingMonthLogResource, WorkingMonthLog> resourceToEntityMapper;
 
   @GetMapping("/employees/{id}/working-month-log/{year}/{month}")
   public EntityModel<WorkingMonthLogResource> single(@PathVariable(name = "id") Long employeeId, @PathVariable Integer year, @PathVariable Integer month) {
-    ensureExistingEmployee(employeeId);
-    return resourceToEntityMapper.toHalEntityModel(findMandatoryWorkingMonthLog(employeeId, year, month));
+    workingMonthLogApiService.ensureExistingEmployee(employeeId);
+    return resourceToEntityMapper.toHalEntityModel(workingMonthLogApiService.findMandatoryWorkingMonthLog(employeeId, year, month));
   }
 
   @GetMapping("/employees/{id}/working-month-log/{year}")
   public CollectionModel<EntityModel<WorkingMonthLogResource>> allOfYear(@PathVariable(name = "id") Long employeeId, @PathVariable Integer year) {
-    ensureExistingEmployee(employeeId);
-    List<EntityModel<WorkingMonthLogResource>> workingLogsOfYear = workingMonthLogRepository.findByEmployeeIdAndLogYear(employeeId, year).stream()
+    workingMonthLogApiService.ensureExistingEmployee(employeeId);
+    List<EntityModel<WorkingMonthLogResource>> workingLogsOfYear = workingMonthLogApiService.findByEmployeeIdAndYear(employeeId, year).stream()
         .map(resourceToEntityMapper::toHalEntityModel)
         .toList();
     return CollectionModel.of(workingLogsOfYear, linkTo(methodOn(WorkingMonthLogController.class).allOfYear(employeeId, year)).withSelfRel());
@@ -59,8 +50,8 @@ public class WorkingMonthLogController {
 
   @GetMapping("/employees/{id}/working-month-log")
   public CollectionModel<EntityModel<WorkingMonthLogResource>> all(@PathVariable(name = "id") Long employeeId) {
-    ensureExistingEmployee(employeeId);
-    List<EntityModel<WorkingMonthLogResource>> workingLogsOfEmployee = workingMonthLogRepository.findByEmployeeId(employeeId).stream()
+    workingMonthLogApiService.ensureExistingEmployee(employeeId);
+    List<EntityModel<WorkingMonthLogResource>> workingLogsOfEmployee = workingMonthLogApiService.findByEmployeeId(employeeId).stream()
         .map(resourceToEntityMapper::toHalEntityModel)
         .toList();
     return CollectionModel.of(workingLogsOfEmployee, linkTo(methodOn(WorkingMonthLogController.class).all(employeeId)).withSelfRel());
@@ -73,19 +64,11 @@ public class WorkingMonthLogController {
       @PathVariable Integer month,
       @RequestBody @Valid WorkingMonthLogResource workingMonthLogResource) {
 
-    ensureExistingEmployee(employeeId);
+    workingMonthLogApiService.ensureExistingEmployee(employeeId);
     ensureConsistencyWithPathVariables(employeeId, year, month, workingMonthLogResource);
+    WorkingMonthLog workingMonthLogCreated = workingMonthLogApiService.create(workingMonthLogResource);
 
-    if (workingMonthLogRepository.findByEmployeeIdAndLogYearAndLogMonthAndWorkingLogSource(employeeId, year, month, WorkingLogSource.INTERNAL).isPresent()) {
-      throw new ResourceAlreadyExistsException("Working log exists already");
-    }
-
-    WorkingMonthLog workingMonthLog = resourceToEntityMapper.toJpaEntity(workingMonthLogResource);
-    workingMonthLog.setInsertEmployeeId(securityContextService.getAuthenticatedEmployee().getId());
-    workingMonthLog.setInsertTimestamp(Instant.now());
-    workingMonthLog.setWorkingLogSource(WorkingLogSource.INTERNAL);
-
-    EntityModel<WorkingMonthLogResource> entityModel = resourceToEntityMapper.toHalEntityModel(workingMonthLogRepository.save(workingMonthLog));
+    EntityModel<WorkingMonthLogResource> entityModel = resourceToEntityMapper.toHalEntityModel(workingMonthLogCreated);
     return ResponseEntity
         .created(entityModel.getRequiredLink(IanaLinkRelations.SELF).toUri())
         .body(entityModel);
@@ -98,15 +81,11 @@ public class WorkingMonthLogController {
       @PathVariable Integer month,
       @RequestBody @Valid WorkingMonthLogResource newResource) {
 
-    ensureExistingEmployee(employeeId);
+    workingMonthLogApiService.ensureExistingEmployee(employeeId);
     ensureConsistencyWithPathVariables(employeeId, year, month, newResource);
+    WorkingMonthLog workingMonthLogToUpdate = workingMonthLogApiService.update(newResource);
 
-    WorkingMonthLog workingMonthLogToUpdate = findMandatoryWorkingMonthLog(employeeId, year, month);
-    workingMonthLogToUpdate.setInsertEmployeeId(securityContextService.getAuthenticatedEmployee().getId());
-    workingMonthLogToUpdate.setInsertTimestamp(Instant.now());
-    workingMonthLogToUpdate.setLogTimeInHours(newResource.getWorkingHours());
-
-    EntityModel<WorkingMonthLogResource> entityModel = resourceToEntityMapper.toHalEntityModel(workingMonthLogRepository.save(workingMonthLogToUpdate));
+    EntityModel<WorkingMonthLogResource> entityModel = resourceToEntityMapper.toHalEntityModel(workingMonthLogToUpdate);
     return ResponseEntity
         .created(entityModel.getRequiredLink(IanaLinkRelations.SELF).toUri())
         .body(entityModel);
@@ -118,14 +97,9 @@ public class WorkingMonthLogController {
       @PathVariable Integer year,
       @PathVariable Integer month) {
 
-    ensureExistingEmployee(employeeId);
-    workingMonthLogRepository.delete(findMandatoryWorkingMonthLog(employeeId, year, month));
+    workingMonthLogApiService.ensureExistingEmployee(employeeId);
+    workingMonthLogApiService.deleteByEmployeeIdAndYearAndMonth(employeeId, year, month);
     return ResponseEntity.noContent().build();
-  }
-
-  private void ensureExistingEmployee(Long employeeId) {
-    employeeRepository.findById(employeeId)
-        .orElseThrow(() -> new EmployeeNotFoundException(employeeId));
   }
 
   private void ensureConsistencyWithPathVariables(Long employeeId, Integer year, Integer month, WorkingMonthLogResource workingMonthLog) {
@@ -139,10 +113,5 @@ public class WorkingMonthLogController {
         employeeId.equals(workingMonthLogResource.getEmployeeId()) &&
             year.equals(workingMonthLogResource.getYear()) &&
             month.equals(workingMonthLogResource.getMonth());
-  }
-
-  private WorkingMonthLog findMandatoryWorkingMonthLog(Long employeeId, Integer year, Integer month) {
-    return workingMonthLogRepository.findByEmployeeIdAndLogYearAndLogMonthAndWorkingLogSource(employeeId, year, month, WorkingLogSource.INTERNAL)
-        .orElseThrow(() -> new ResourceNotFoundException("Could not find working month log"));
   }
 }
