@@ -27,6 +27,7 @@ dependencies {
     implementation 'org.liquibase:liquibase-core'
 
     implementation 'org.apache.commons:commons-lang3:3.18.0'
+    implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.8.9'
 
     compileOnly 'org.projectlombok:lombok'
     runtimeOnly 'com.h2database:h2'
